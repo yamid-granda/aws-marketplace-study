@@ -119,8 +119,12 @@ token. This interacts directly with the identifier question above.
 
 | Diagram | Question |
 |---|---|
-| [`../diagrams/00-context.mmd`](../diagrams/00-context.mmd) | What are the moving parts? |
-| [`../diagrams/10-create-product.mmd`](../diagrams/10-create-product.mmd) | What happens during Create Product? |
+| [`../diagrams/00-system.mmd`](../diagrams/00-system.mmd) | How does a `Create Product` request move through the system? |
+
+`Create Product` is currently the only feature, so `00-system.mmd` carries the
+whole system design flow. As features are added, extend it and split only when
+it stops being legible — see
+[`../diagrams/README.md`](../diagrams/README.md) → "When to split".
 
 ## Open questions
 

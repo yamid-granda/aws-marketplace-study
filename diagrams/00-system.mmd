@@ -1,0 +1,73 @@
+%% AWS Marketplace — system design flow.
+%% Ref: docs/system.md -> "Specified"
+%% 
+%% Create Product is the only feature so far, so the whole system is one
+%% diagram. When features are added, extend this file and split only once it
+%% stops being legible — see diagrams/README.md -> "When to split".
+%% 
+%% PROVENANCE, per docs/system.md:
+%%   solid          = specified (one endpoint; Lambda compute; DynamoDB storage)
+%%   dashed + amber = INFERRED or undecided — not a decision, do not build on it
+%% 
+%% No vendor, no customer, no billing. An earlier revision of this file
+%% described an AWS Marketplace seller integration; it was invented, not
+%% specified, and has been removed.
+
+flowchart TB
+
+  %% ── request ────────────────────────────────────────────────────────────
+
+  client["Catalog client<br/>id: client<br/>who calls this is unspecified"]
+
+  client -- "POST /products<br/>{name, description, images[1..3], price, stock}" --> api
+
+  api["HTTP front door<br/>id: api<br/>API Gateway? Function URL? undecided"]
+
+  api -- "invoke handler" --> validate_payload
+
+  %% ── handler ────────────────────────────────────────────────────────────
+
+  validate_payload{"Payload valid?<br/>required fields present,<br/>1 <= images <= 3,<br/>stock >= 0<br/>id: validate_payload"}
+  validate_payload -- "no" --> rejected["400 Bad Request<br/>id: rejected"]
+  validate_payload -- "yes" --> resolve_images
+
+  %% 'images' is specified as a count, not as a type. Whether these are S3 keys,
+  %% signed URLs, or something else is unresolved.
+  resolve_images["Resolve image references<br/>id: resolve_images"]
+  resolve_images -- "referenced image missing" --> rejected
+  resolve_images -- "all references resolve" --> assign_id
+
+  %% The payload has no productId. This becomes the DynamoDB partition key, so
+  %% the choice is not local — it constrains every later endpoint.
+  assign_id["Assign productId<br/>id: assign_id"]
+
+  assign_id --> put_item
+
+  put_item["PutItem<br/>id: put_item<br/>partition key = productId"]
+
+  %% Lambda retries on failure. Whether this collision can happen at all depends
+  %% on assign_id — server-generated ids cannot collide across retries,
+  %% caller-supplied ones can.
+  put_item -- "condition failed:<br/>key already exists" --> is_duplicate
+  is_duplicate{"Idempotent retry,<br/>or a real conflict?<br/>id: is_duplicate"}
+  is_duplicate -. "OPEN: return existing<br/>or 409?" .-> rejected
+  is_duplicate -. "OPEN: compare<br/>payload hash?" .-> created
+
+  %% ── persistence and response ───────────────────────────────────────────
+
+  put_item -- "write item" --> products_table
+
+  products_table["DynamoDB<br/>products table<br/>id: products_table"]
+
+  put_item -- "201 Created" --> created["201 Created<br/>id: created"]
+
+  %% ── images ─────────────────────────────────────────────────────────────
+
+  client -. "upload images<br/>min 1, max 3" .-> image_store
+  resolve_images -. "stores keys or signed URLs,<br/>NOT image bytes" .-> image_store
+
+  image_store["Image store<br/>id: image_store<br/>S3? bytes? undecided"]
+
+  %% Amber dashed = inferred or undecided. See docs/system.md provenance rule.
+  classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
+  class api,image_store,resolve_images,assign_id,is_duplicate notspecified

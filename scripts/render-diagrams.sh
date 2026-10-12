@@ -52,6 +52,20 @@ for src in "${SOURCES[@]}"; do
   name="$(basename "$src" .mmd)"
   out="$TMP_DIR/$name.svg"
 
+  # Pre-flight: a bare '%%' line with no text makes Mermaid fail with a
+  # misleading "Parse error on line 1" pointing at the comment block instead of
+  # the empty comment. Name the real problem here.
+  #
+  # The pattern anchors on '%%' at end-of-line with no trailing blank, so the
+  # recommended fix ('%% ' with a trailing space) does not trip this check.
+  if grep -nqE '^[[:blank:]]*%%$' "$src"; then
+    echo "  ERROR $name.mmd — bare '%%' comment line(s), which Mermaid cannot parse:" >&2
+    grep -nE '^[[:blank:]]*%%$' "$src" | sed 's/^/          line /' >&2
+    echo "         use '%% ' with a trailing space, or a genuinely blank line" >&2
+    failed=1
+    continue
+  fi
+
   if ! "${MMDC[@]}" --input "$src" --output "$out" --quiet 2>"$TMP_DIR/$name.err"; then
     echo "  FAIL  $name.mmd — invalid Mermaid syntax" >&2
     sed 's/^/        /' "$TMP_DIR/$name.err" >&2

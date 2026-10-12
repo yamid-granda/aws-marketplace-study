@@ -68,19 +68,32 @@ both a human reading it and an agent grepping it.
    unlabeled edge forces a reader (human or agent) to guess the protocol,
    direction, and payload. If the edge has no label, it is not understood.
 
-3. **One concern per file.** A diagram that answers one question renders
-   legibly. A diagram that answers five renders as a hairball. Split it.
+3. **One diagram, split only on evidence.** There is a single file,
+   `diagrams/00-system.mmd`, covering the whole system design flow. Extending
+   it is the default as features arrive. Split into `00-context.mmd` plus one
+   flow per feature only when a trigger in
+   [`diagrams/README.md`](diagrams/README.md) → "When to split" actually fires —
+   overlapping labels, an untraceable request, or a node duplicated across
+   files. Do not split preemptively: two files for a five-node system is harder
+   to read, not easier.
 
 4. **Rationale goes inline.** Put the *why* in a `%%` comment directly above
    the edge or node it explains. Mermaid ignores comments when rendering; an
    agent reads them first. A rationale three paragraphs away from the decision
    it explains is lost.
 
-5. **External systems get the dashed class.**
-   `class marketplace external` — anything you do not control.
+5. **Undecided things get the `notspecified` class.**
+   `class api,image_store notspecified` renders amber and dashed. Everything
+   here is AWS-managed, so a "third party vs ours" marking carries no meaning —
+   what a reader needs to know is which parts are real yet. See the provenance
+   rule above; never let a guess render as solid.
 
 6. **Cross-reference by path.** Link diagrams to the code or doc that
    implements them so an agent can jump from diagram to implementation.
+
+7. **A bare `%%` line breaks the parser** and reports the error at line 1,
+   pointing at the comment block. Use `%% ` with a trailing space.
+   `render-diagrams.sh` pre-flights this.
 
 ## Commit messages
 

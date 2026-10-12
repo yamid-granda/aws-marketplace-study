@@ -18,19 +18,15 @@ DynamoDB.
 | [`diagrams/README.md`](diagrams/README.md) | Diagram index, provenance rules, authoring conventions |
 | [`AGENTS.md`](AGENTS.md) | How to work in this repo |
 
-## Diagrams
+## Diagram
 
-### Context — what are the moving parts?
+### The system design flow
 
-[![Context diagram](docs/img/00-context.svg)](diagrams/00-context.mmd)
+[![System diagram](docs/img/00-system.svg)](diagrams/00-system.mmd)
 
-### Create Product — what happens during one request?
-
-[![Create Product diagram](docs/img/10-create-product.svg)](diagrams/10-create-product.mmd)
-
-> Each diagram is generated from its `.mmd` source. Click an image to edit the
-> source — never edit the SVG. Amber dashed nodes are **inferred or undecided**,
-> not specified.
+> One diagram covers the whole system — `Create Product` is the only feature so
+> far. Generated from its `.mmd` source; click to edit, never edit the SVG.
+> Amber dashed nodes are **inferred or undecided**, not specified.
 
 ## Quick start
 

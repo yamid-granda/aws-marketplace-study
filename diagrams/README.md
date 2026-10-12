@@ -1,14 +1,15 @@
 # Diagrams
 
-One diagram per concern. Each answers exactly one question — if a diagram needs
-a "and" in its title, it is two diagrams.
+One diagram for the whole system design flow.
 
 ## Index
 
-| File | Level | Question |
-|---|---|---|
-| `00-context.mmd` | Context | What are the moving parts? |
-| `10-create-product.mmd` | Container | What happens during Create Product? |
+| File | Question |
+|---|---|
+| `00-system.mmd` | How does a `Create Product` request move through the system? |
+
+`Create Product` is the only feature so far. As features are added, extend this
+file rather than adding a new one — see [When to split](#when-to-split).
 
 ## Rendering
 
@@ -23,12 +24,17 @@ It uses the locally pinned `mermaid-cli` from `package-lock.json`, so run
 but it warns — an unpinned renderer changes the SVG bytes and breaks the
 byte-exact staleness check.
 
-### Syntax gotcha
+### Syntax gotchas
 
-A bare `%%` line with **no text after it** breaks the Mermaid parser with a
-misleading `Parse error on line 1` that points at the comment block rather
-than the empty comment. Use `%% ` (with a trailing space) or a genuinely
-blank line.
+The script pre-flights one trap and Mermaid's own errors are unhelpful for the
+rest:
+
+- **Bare `%%` comment lines break the parser.** A line containing only `%%`
+  fails with `Parse error on line 1`, pointing at the comment block rather than
+  the empty comment. Use `%% ` with a trailing space, or a blank line.
+  `render-diagrams.sh` now detects this and names it.
+- `<` inside a node label can be read as an HTML tag start. If a label misbehaves,
+  try replacing `<=` with `≤` or spelling it out.
 
 ## Provenance: specified vs inferred
 
@@ -49,7 +55,7 @@ The styling is two lines:
 
 ```
 classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
-class api,image_store notspecified
+class api,image_store,resolve_images,assign_id,is_duplicate notspecified
 ```
 
 If a detail is not specified, **say it is not specified** — in the diagram, in
@@ -57,10 +63,30 @@ If a detail is not specified, **say it is not specified** — in the diagram, in
 unresolved question written down is useful. An invented answer written down is
 a liability that outlives the conversation it came from.
 
+## When to split
+
+One diagram is the right answer today, and splitting preemptively would be
+premature — a two-file diagram of a five-node system is harder to read, not
+easier. But a single diagram does not scale forever.
+
+Split when a diagram starts failing, not when it hits a node count:
+
+| Trigger | Action |
+|---|---|
+| Edge labels start overlapping and the render needs checking | First sign. Shorten labels. |
+| You cannot trace one request end-to-end without a finger on the screen | Split: flow per feature, context separate. |
+| The same node appears in two files and you edit both | The model wants to be shared. Split, or move to Structurizr. |
+| You are tempted to hide detail to keep it fitting | Already too big. Split. |
+
+When it splits, the convention returns to one concern per file — a context
+diagram for the components, and one flow diagram per feature. The numbering
+prefix exists for that: `00-context.mmd`, `10-create-product.mmd`,
+`20-next-feature.mmd`.
+
 ## Authoring conventions
 
 The goal is that a diagram is legible to a human reading it *and* to an agent
-grepping it. These rules are what make that true.
+grepping it.
 
 ### 1. Stable node IDs are the contract
 
@@ -114,6 +140,7 @@ real yet*. See [Provenance](#provenance-specified-vs-inferred).
 | Node labels | `<Thing><br/>id: node_id` for named nodes |
 | Subgraphs | Quote the label; lowercase ID |
 | Unverified facts | `TODO(verify):` in a `%%` comment |
+| Direction | `flowchart TB` — tall scrolls, wide shrinks to illegible in markdown |
 
 ## Why text instead of a drawing tool
 
