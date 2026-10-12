@@ -73,10 +73,19 @@ a float.
 image bytes cannot live in the product item — the item holds references
 instead.
 
-> **Open:** what a reference is. An S3 key, or a pre-signed URL? And does
-> `images: 3` mean three uploaded objects or three references? Also undecided:
-> whether the merchant uploads before or after the product is created, and how
-> orphaned uploads are reclaimed if the create call then fails.
+**Specified:** images arrive inside the `POST /products` payload. The Lambda
+writes the bytes to S3 and stores only the references in the DynamoDB item.
+
+> **Open:** what a reference is — an S3 key, or a pre-signed URL? And does
+> `images: 3` mean three images in the request body or three references in the
+> stored item?
+>
+> **Open:** failure atomicity. The Lambda writes to S3 and DynamoDB as two
+> separate operations with no transaction spanning them. If the `PutItem`
+> fails after the S3 writes succeed, the bucket holds images that no product
+> points at. There is no "orphaned upload" state to reconcile, because the
+> uploads happen during the request rather than before it — but there is now a
+> partial-failure path inside a single request, and no stated behaviour for it.
 
 ### `stock` constrains every later endpoint
 
@@ -132,8 +141,8 @@ Consolidated, in rough order of how much they block:
    be described end to end.
 2. **Product identifier** — generated or supplied? Becomes the partition key.
 3. **`price` representation** — minor units or decimal string? Currency?
-4. **Image reference shape** — S3 key or pre-signed URL? Upload before or after
-   product creation, and how are orphaned uploads reclaimed?
+4. **Image reference shape** — S3 key or pre-signed URL? And what happens to
+   images already written to S3 when the subsequent `PutItem` fails?
 5. **Authentication** — who is permitted to create a product? A public
    catalog endpoint with no auth is a write endpoint anyone can call.
 6. **Stock semantics** — can it be unlimited? How is that represented?

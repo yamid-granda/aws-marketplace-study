@@ -23,9 +23,8 @@ flowchart TB
 
   image_store["Amazon S3<br/>images<br/>id: image_store"]
 
-  merchant -- "POST /products" --> api_gateway
+  merchant -- "POST /products<br/>images in payload" --> api_gateway
   api_gateway -- "invoke" --> create_product
-  create_product -- "PutItem" --> products_table
+  create_product -- "PutItem<br/>stores image references" --> products_table
 
-  merchant -- "upload images" --> image_store
-  create_product -- "image references" --> image_store
+  create_product -- "store images" --> image_store
