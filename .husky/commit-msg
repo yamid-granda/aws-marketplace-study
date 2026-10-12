@@ -1,0 +1,6 @@
+# Validate the commit message against Conventional Commits.
+#
+# --no-install makes this fail fast instead of silently downloading commitlint
+# when node_modules is missing. If you see "command not found", run `npm ci`.
+# To bypass once (e.g. amending a pre-convention commit): git commit --no-verify
+npx --no-install commitlint --edit "$1"

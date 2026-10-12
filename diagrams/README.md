@@ -14,9 +14,15 @@ a "and" in its title, it is two diagrams.
 ## Rendering
 
 ```bash
-./scripts/render-diagrams.sh          # render all → docs/img/
-./scripts/render-diagrams.sh --check  # exit 1 if any committed SVG is stale
+npm run diagrams        # render all → docs/img/
+npm run diagrams:check  # exit 1 if any committed SVG is stale
 ```
+
+The script is also callable directly as `./scripts/render-diagrams.sh [--check]`.
+It uses the locally pinned `mermaid-cli` from `package-lock.json`, so run
+`npm ci` first. A fallback to a floating `npx` download exists for convenience,
+but it warns — an unpinned renderer changes the SVG bytes and breaks the
+byte-exact staleness check.
 
 ## Authoring conventions
 

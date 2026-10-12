@@ -28,14 +28,14 @@ flowchart TB
   buyer_app -- "HTTPS app traffic<br/>→ authenticated session" --> vendor_saas
   vendor_saas -- "internal call<br/>'is this tenant entitled?'" --> entitlement_svc
 
-  entitlement_svc -- "SigV4 POST /ResolveEntitlements<br/>→ Entitlements[]" --> marketplace
+  entitlement_svc -- "SigV4 /ResolveEntitlements<br/>→ Entitlements[]" --> marketplace
 
   %% Vendor DB is a MIRROR of Marketplace state, never the system of record.
   %% Losing it must be recoverable by re-resolving.
   entitlement_svc -- "write mirror<br/>account → CustomerIdentifier,<br/>dimensions, valid-from/until" --> vendor_db
 
   vendor_saas -- "usage events<br/>(metered dimensions only)" --> metering_svc
-  metering_svc -- "SigV4 POST /BatchMeterUsage<br/>→ UsageRecordResult[]" --> marketplace
+  metering_svc -- "SigV4 /BatchMeterUsage<br/>→ UsageRecordResult[]" --> marketplace
 
   %% Not every customer comes from Marketplace, so the entitlement and metering
   %% paths must both be no-ops rather than errors for direct customers.

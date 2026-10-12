@@ -35,5 +35,15 @@ in CI. See [`diagrams/README.md`](diagrams/README.md) for conventions and
 ## Quick start
 
 ```bash
-./scripts/render-diagrams.sh   # writes docs/img/*.svg
+npm ci                 # pinned dev dependencies (Node >= 20.12)
+npm run diagrams       # writes docs/img/*.svg
+npm run lint           # check commit messages, then diagram freshness
 ```
+
+## Contributing
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/),
+enforced by a husky `commit-msg` hook and again in CI. See
+[`AGENTS.md`](AGENTS.md) for the full rules — including the repo-specific
+`diagrams` type and the rule that a `.mmd` change ships with its re-rendered
+SVG in the same commit.

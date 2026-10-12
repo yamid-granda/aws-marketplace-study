@@ -21,7 +21,15 @@ if [[ "${1:-}" == "--check" ]]; then
   CHECK_ONLY=true
 fi
 
-MMDC=(npx --yes @mermaid-js/mermaid-cli)
+# Prefer the pinned local install. Falling back to a floating `npx --yes`
+# silently picks up whatever mermaid-cli is newest, which can change the
+# rendered SVG and make --check fail in CI for reasons unrelated to the .mmd.
+if [[ -x "$REPO_ROOT/node_modules/.bin/mmdc" ]]; then
+  MMDC=("$REPO_ROOT/node_modules/.bin/mmdc")
+else
+  echo "note: mermaid-cli not installed locally; falling back to npx (unpinned)" >&2
+  MMDC=(npx --yes @mermaid-js/mermaid-cli)
+fi
 
 command -v node >/dev/null 2>&1 || { echo "error: node is required" >&2; exit 1; }
 

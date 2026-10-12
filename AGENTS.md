@@ -31,6 +31,8 @@ automatically. Do not "fix" CI by re-committing stale SVGs.
 | `diagrams/README.md` | Diagram index and the conventions below |
 | `docs/img/*.svg` | **Generated** — do not edit |
 | `scripts/render-diagrams.sh` | Renders all diagrams, fails on stale output |
+| `commitlint.config.mjs` | Conventional Commits rules, enforced locally and in CI |
+| `.husky/commit-msg` | Git hook that validates every commit message |
 
 ## Diagram conventions
 
@@ -59,6 +61,38 @@ both a human reading it and an agent grepping it.
 6. **Cross-reference by path.** Link diagrams to the code or doc that
    implements them so an agent can jump from diagram to implementation.
 
+## Commit messages
+
+Every commit message must follow [Conventional Commits](https://www.conventionalcommits.org/),
+validated by `commitlint` in a `commit-msg` hook and again in CI:
+
+```
+type(scope): subject
+
+Body explaining why, not what. Blank line before it.
+```
+
+**Rules that will reject your commit:**
+
+- Subject is lowercase. `chore: update readme` ✓ — `chore: Update readme` ✗
+- No trailing period on the subject.
+- Header at most 100 characters. If the summary needs wrapping, the detail
+  belongs in the body.
+- `type` must be one of: `build`, `chore`, `ci`, `docs`, `feat`, `fix`,
+  `perf`, `refactor`, `revert`, `style`, `test`, `diagrams`.
+
+**Types specific to this repo:**
+
+| Type | Use for |
+|---|---|
+| `diagrams` | Any change to `diagrams/*.mmd` **or** their rendered SVG |
+| `docs` | Prose in `docs/`, `README.md`, `AGENTS.md` |
+| `ci` | Workflows and the render script |
+
+Commit a `.mmd` change together with its re-rendered SVG — they are one change.
+Do not use `--no-verify` to route around the hook. If the hook itself is wrong,
+fix `commitlint.config.mjs` and say so in the commit body.
+
 ## Accuracy rule
 
 This is a study repo, so wrong-but-confident is worse than incomplete.
@@ -72,9 +106,18 @@ with `TODO(verify):`.
 ## Commands
 
 ```bash
-./scripts/render-diagrams.sh          # render all diagrams to docs/img/
-./scripts/render-diagrams.sh --check  # fail if any SVG is stale (use in CI)
+npm ci                                  # install pinned dev dependencies
+npm run diagrams                        # render all diagrams to docs/img/
+npm run diagrams:check                  # fail if any SVG is stale (used in CI)
+npm run lint                            # lint commits since origin/main, then diagrams
+npm run commitlint -- --edit <file>     # check one specific message file
 ```
 
-Renders via `npx @mermaid-js/mermaid-cli`, so there is no install step and no
-lockfile to maintain. The first run downloads the CLI.
+Requires Node `>=20.12` (see `.nvmrc`). `mermaid-cli` is pinned in
+`package-lock.json` deliberately: the `--check` comparison is byte-exact, so an
+unpinned renderer silently changes the SVGs and turns CI red for reasons that
+have nothing to do with the `.mmd`. Bumping it is a deliberate act — expect to
+re-render and commit all three SVGs in the same change.
+
+`npm run lint:commit` needs `origin/main` to be fetched. On a repo with no
+remote, lint an explicit range instead.

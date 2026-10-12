@@ -1,0 +1,44 @@
+name: commitlint
+
+# Enforces Conventional Commits locally (husky commit-msg hook) and again in
+# CI, because a hook can be bypassed with --no-verify or simply not installed
+# on a contributor's machine.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # commitlint --from/--to walks commit ranges, so it needs full history.
+          # The default shallow fetch of 1 commit makes both ranges empty and
+          # the check silently passes.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint commits in this pull request
+        if: github.event_name == 'pull_request'
+        run: >
+          npx commitlint
+          --from "${{ github.event.pull_request.base.sha }}"
+          --to "${{ github.event.pull_request.head.sha }}"
+          --verbose
+
+      - name: Lint commits pushed to main
+        if: github.event_name == 'push'
+        run: >
+          npx commitlint
+          --from "${{ github.event.before }}"
+          --to "${{ github.event.sha }}"
+          --verbose

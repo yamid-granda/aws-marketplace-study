@@ -17,7 +17,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      # Pinned via package-lock.json. The SVG comparison is byte-exact, so a
+      # renderer version bump changes the output and needs to be deliberate.
+      - run: npm ci
 
       - name: Verify diagrams are in sync with their source
         run: ./scripts/render-diagrams.sh --check
