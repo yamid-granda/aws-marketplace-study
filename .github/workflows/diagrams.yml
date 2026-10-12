@@ -1,0 +1,30 @@
+name: diagrams
+
+# Fails the build when a committed SVG no longer matches its .mmd source.
+# This is what makes the "diagrams go stale" problem a CI failure rather than
+# something a reviewer has to notice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify diagrams are in sync with their source
+        run: ./scripts/render-diagrams.sh --check
+
+      - name: Upload rendered diagrams
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagrams-svg
+          path: docs/img/

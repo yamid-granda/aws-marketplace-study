@@ -1,0 +1,43 @@
+%% Container level — how does a single user request become an authorized request?
+%% Ref: docs/system.md -> "Constraints"
+%% NOTE: the outage branch is deliberately unresolved. It is an open decision,
+%% not an oversight. See docs/system.md -> "Open questions".
+
+flowchart TB
+
+  inbound_request["Inbound request<br/>id: inbound_request"] --> authenticate["Authenticate caller<br/>id: authenticate"]
+  authenticate -- "AWS account id from session token" --> lookup_customer["Look up CustomerIdentifier<br/>id: lookup_customer"]
+  lookup_customer -- "Vendor DB mirror<br/>→ CustomerIdentifier" --> entitlement_cache
+
+  entitlement_cache{"Cached entitlement<br/>id: entitlement_cache"}
+  entitlement_cache -- "HIT and within staleness bound" --> authorize["Authorize → serve request"]
+
+  entitlement_cache -- "MISS or STALE" --> resolve_entitlements
+
+  %% Why cache at all: an uncached path puts a third-party SigV4 round trip on
+  %% every user request. The staleness bound is the price we pay for latency.
+  %% TODO(verify): the bound is unset — it is the main open design tension here.
+  resolve_entitlements["SigV4 POST /ResolveEntitlements<br/>id: resolve_entitlements"]
+
+  resolve_entitlements -- "Entitlements[] — each has Dimension,<br/>value, StartDate, EndDate, Overage" --> entitlement_cache
+  entitlement_cache -- "refreshed, dimension matched" --> authorize
+
+  %% Entitlements are time-bounded, so "expired mid-session" is expected
+  %% behaviour, not an edge case. Denial here is routine.
+  resolve_entitlements -- "no entitlement, or EndDate passed" --> deny["Deny — 403 not subscribed"]
+  entitlement_cache -- "EndDate passed since caching" --> deny
+
+  resolve_entitlements -- "timeout / 5xx / Marketplace down" --> outage_policy
+  outage_policy{"Outage policy<br/>id: outage_policy"}
+
+  outage_policy -. "serve last known grant,<br/>bounded by TTL" .-> entitlement_cache
+  outage_policy -. "OPEN: fail closed → deny" .-> deny
+
+  %% Fail-open and fail-closed are both defensible. The answer depends on what
+  %% the product actually does for an unsubscribed user, which is not decided.
+  %% Do not "resolve" this by picking one silently.
+
+  classDef notours stroke-dasharray: 4 3
+  classDef openquestion stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
+  class resolve_entitlements notours
+  class outage_policy openquestion

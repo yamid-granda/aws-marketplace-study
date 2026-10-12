@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+
+# Mermaid CLI writes here; render-diagrams.sh copies the results to docs/img/
+.tmp/
