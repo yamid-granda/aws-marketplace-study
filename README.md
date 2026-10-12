@@ -1,36 +1,36 @@
-# AWS Marketplace Study
+# AWS Marketplace
 
-Working notes on integrating a SaaS product with AWS Marketplace — entitlement
-resolution and usage metering.
+A product-catalog service: a `Create Product` endpoint backed by AWS Lambda and
+DynamoDB.
 
-The diagrams are Mermaid text, editable by hand and by agent, rendered to SVG
-in CI. See [`diagrams/README.md`](diagrams/README.md) for conventions and
-[`AGENTS.md`](AGENTS.md) for the editing contract.
+> **Read this first.** An earlier revision of this repo documented an AWS
+> Marketplace *seller* integration — entitlements, metering, `CustomerIdentifier`,
+> SigV4. That system was **invented**, not specified, and has been deleted. It
+> described nothing real. The current spec is the single `Create Product`
+> endpoint, and `docs/system.md` separates what was specified from what is
+> merely inferred or still undecided.
 
 ## Start here
 
 | Doc | What it covers |
 |---|---|
-| [`docs/system.md`](docs/system.md) | Scope, billing models, API surface, constraints, open questions |
-| [`diagrams/README.md`](diagrams/README.md) | Diagram index + authoring conventions |
+| [`docs/system.md`](docs/system.md) | The spec, the data model, and what is still undecided |
+| [`diagrams/README.md`](diagrams/README.md) | Diagram index, provenance rules, authoring conventions |
 | [`AGENTS.md`](AGENTS.md) | How to work in this repo |
 
-## Rendered diagrams
+## Diagrams
 
-### Context — who talks to what, and what do we own?
+### Context — what are the moving parts?
 
 [![Context diagram](docs/img/00-context.svg)](diagrams/00-context.mmd)
 
-### Entitlement — how does a request become an authorized request?
+### Create Product — what happens during one request?
 
-[![Entitlement diagram](docs/img/10-entitlement.svg)](diagrams/10-entitlement.mmd)
-
-### Metering — how does usage become revenue?
-
-[![Metering diagram](docs/img/20-metering.svg)](diagrams/20-metering.mmd)
+[![Create Product diagram](docs/img/10-create-product.svg)](diagrams/10-create-product.mmd)
 
 > Each diagram is generated from its `.mmd` source. Click an image to edit the
-> source — never edit the SVG.
+> source — never edit the SVG. Amber dashed nodes are **inferred or undecided**,
+> not specified.
 
 ## Quick start
 
@@ -47,3 +47,7 @@ enforced by a husky `commit-msg` hook and again in CI. See
 [`AGENTS.md`](AGENTS.md) for the full rules — including the repo-specific
 `diagrams` type and the rule that a `.mmd` change ships with its re-rendered
 SVG in the same commit.
+
+**Most important rule:** do not invent spec. If something is not specified, write
+it down as an open question and mark it as such in prose, in diagrams, and in the
+commit message.

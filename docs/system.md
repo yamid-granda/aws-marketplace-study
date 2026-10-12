@@ -1,110 +1,141 @@
-# System: AWS Marketplace integration
+# System: AWS Marketplace
 
-Scope, terminology, and constraints for the integration being studied here.
-This is the narrative layer — diagrams in [`../diagrams`](../diagrams) are
-views over what is written here.
+Working spec for a product-catalog service.
 
-> **Accuracy note.** API limits and field semantics change. Anything asserted
-> about AWS Marketplace behaviour is marked `TODO(verify)` until checked against
-> the current AWS documentation.
+> **Provenance rule for this file.** Three kinds of statement appear here, and
+> they are never mixed:
+>
+> - **Specified** — given by the project owner. Authoritative.
+> - **Inferred** — follows from the specified architecture but not stated.
+>   Marked inline. Do not treat as decided.
+> - **Open** — a decision nobody has made. Marked inline.
+>
+> Earlier revisions of this file described an AWS Marketplace *seller
+> integration* (entitlements, metering, `CustomerIdentifier`). That was
+> invented, not specified, and has been removed. If you encounter it in git
+> history below the commit that replaced it, it describes nothing real.
 
-## What the vendor sells
+## Specified
 
-A multi-tenant SaaS product, sold through AWS Marketplace to AWS customers. Two
-billing models matter here:
+### Project
 
-- **SaaS contract** — a subscription. The buyer pays a flat fee for the term
-  and usage is unlimited from the vendor's perspective.
-- **SaaS with metered usage** — the buyer subscribes to *dimensions* (seats,
-  API calls, GB-months), and the vendor reports consumption against them.
+Title: **AWS Marketplace**.
 
-The integration has to support both. A SaaS-contract buyer still needs
-entitlement resolution (is this account actually subscribed, and until when?),
-but generates no usage records.
+### Endpoint 1 — Create Product
 
-## The central problem
+Creates a product record. Persisted via AWS Lambda into DynamoDB.
 
-AWS Marketplace does not tell the vendor about new subscribers through a
-push notification. The vendor has to discover them. That single fact drives
-almost every design decision in this repo, and it is the reason the system has
-two separate paths with very different latency and failure characteristics:
+**Request payload:**
 
-- **Entitlement resolution** — synchronous, on the user's request path.
-  If this is slow or unavailable, customers cannot use the product.
-- **Metering** — asynchronous, batched. If this is slow or unavailable, the
-  vendor under-bills and AWS Marketplace eventually rejects the records.
-
-## AWS Marketplace API surface
-
-All calls are SigV4-signed HTTPS against the regional Metering endpoint
-(`metering.<region>.amazonaws.com`). Three operations drive everything:
-
-| Operation | Purpose | Latency class |
+| Field | Type | Constraint |
 |---|---|---|
-| `ResolveCustomer` | Map an AWS account ID → opaque `CustomerIdentifier` | Setup, not request path |
-| `ResolveEntitlements` | Given a `CustomerIdentifier`, list active entitlements | Synchronous, request path |
-| `BatchMeterUsage` | Report a batch of consumption records | Asynchronous, batched |
+| `name` | string | — |
+| `description` | string | — |
+| `images` | array | **min 1, max 3** |
+| `price` | number | — |
+| `stock` | number | — |
 
-### `CustomerIdentifier` is the join key
+The payload as specified does not define a product identifier, a currency, or
+any authentication. Those are listed under [Open questions](#open-questions),
+not filled in here.
 
-`ResolveCustomer` returns an **opaque, per-customer-per-product identifier**.
-It is deliberately not the AWS account ID and must not be guessable.
+## Architecture
 
-This is the security and data-modelling crux of the whole integration: the
-`CustomerIdentifier` — not the AWS account ID — is the key that usage records
-are metered against and entitlements are keyed by. Building your own billing
-key off the account ID instead would be a design error.
+| Concern | Specified |
+|---|---|
+| Compute | AWS Lambda |
+| Storage | DynamoDB |
 
-### Entitlements are dimensioned and time-bounded
+**Inferred:** something terminates HTTP in front of the Lambda — API Gateway,
+a Lambda Function URL, or an ALB. The spec says "endpoints" but names no
+front door. Diagrams show API Gateway; this is a guess, not a decision.
 
-An entitlement is not a boolean. Each carries a `Dimension`, a grant value
-(`Entitlement`), validity dates (`StartDate` / `EndDate`), an `EffectiveDate`,
-and an `Overage` flag. Time-bounded means "not entitled" is a normal,
-expected state — and an entitlement that expires mid-session is a real case,
-not an edge case.
+## Data model
 
-### Metering results are per-record, and failures are expected
+A product is stored as a DynamoDB item. The fields are specified; their
+*types* are not, and two of them cannot safely use the obvious type.
 
-`BatchMeterUsage` returns a `UsageRecordResult` per submitted record, in
-order, each with its own `Status`. Statuses observed include `Success`,
-`CustomerNotSubscribed`, `DuplicateRecord`, `InvalidTimestampDimension`,
-`NotEntitled`, and `Throttled`.
+### `price` must be integer minor units
 
-Two consequences:
+The payload says `price` is a number. A JSON number is a float, and float
+arithmetic does not round: `0.1 + 0.2` is not `0.3`. Any later computation on
+price — tax, discounts, refunds, totals — inherits that error.
 
-1. **Partial success is the normal case.** A batch succeeding does not mean the
-   records in it were accepted. A naive "batch call returned 200, drop the
-   batch" integration loses revenue on every partial failure.
-2. **Failures are mostly permanent, not transient.** `DuplicateRecord` and
-   `NotEntitled` must not be retried forever. Only throttle-shaped statuses
-   warrant backoff. This is the single easiest thing to get wrong.
+**Recommendation:** store `price` as an integer in minor units (`1999` for
+$19.99) alongside an explicit `currency` field, or as a decimal string. Never
+a float.
 
-`TODO(verify)`: confirm the current maximum records per `BatchMeterUsage` call
-and the current throttle thresholds before sizing the batcher in
-[`../diagrams/20-metering.mmd`](../diagrams/20-metering.mmd).
+> **Open:** currency is absent from the payload. A bare number is meaningless
+> across currencies, and the choice of representation constrains every later
+> endpoint that touches price.
 
-## Constraints
+### `images` should not be image data
 
-- **Entitlement resolution is on the hot path.** It cannot block the product
-  on a third-party round trip for every request without a latency budget and a
-  degradation story. See
-  [`../diagrams/10-entitlement.mmd`](../diagrams/10-entitlement.mmd).
-- **Vendor is not the system of record for subscriptions.** AWS Marketplace
-  is. The vendor's mirror is a cache, and any cache must be built so that
-  losing it is recoverable.
-- **Usage records must survive vendor failure.** Records already accepted by
-  AWS Marketplace must never be re-sent, or they double-bill. This is why
-  idempotency, not retry, is the hard part of metering.
-- **Credentials are AWS-native.** SigV4 to a regional endpoint means IAM
-  rotation and regional scoping are real concerns, not hypotheticals.
+**Open:** the payload says `images` without saying what an image *is*.
+
+DynamoDB caps an item at 400 KB, so image bytes in the item are not viable.
+The likely design is S3 for the binary, with the product item holding keys or
+signed URLs. That also affects the count constraint: is `images: 3` three
+uploaded objects, or three references?
+
+> **Open:** image storage, and whether images are uploaded before the product
+> is created or attached afterward.
+
+### `stock` constrains every later endpoint
+
+On *create*, `stock` is just an initial value — set, not decremented. But it
+determines what any future purchase or reservation endpoint is allowed to do,
+so the type has to be chosen now.
+
+Two requirements follow:
+
+1. **Concurrent decrement must not oversell.** A read-then-write in Lambda
+   lets two simultaneous purchases both read `stock: 1` and both succeed. The
+   write must be conditional: `SET stock = stock - :q IF stock >= :q`, with a
+   failed condition meaning "someone else won the race".
+2. **Unlimited stock needs a representation.** If a product can be unlimited,
+   that state must be distinguishable from a large finite number. A sentinel
+   is workable; a missing field is not, because absence is ambiguous with
+   "not set".
+
+> **Open:** whether unlimited stock is possible, and how it is represented.
+
+### Missing: a product identifier
+
+The payload has no `productId`. Something must generate one — UUID, a
+ULID, or a caller-supplied SKU — and it becomes the DynamoDB partition key.
+
+> **Open:** identifier generation, and whether the caller supplies a SKU.
+
+### Missing: idempotency
+
+Lambda retries on failure. A retried `Create Product` creates a second product
+unless the write is conditional or keyed on a client-supplied idempotency
+token. This interacts directly with the identifier question above.
+
+> **Open:** whether callers may retry, and how duplicates are prevented.
+
+## Diagrams
+
+| Diagram | Question |
+|---|---|
+| [`../diagrams/00-context.mmd`](../diagrams/00-context.mmd) | What are the moving parts? |
+| [`../diagrams/10-create-product.mmd`](../diagrams/10-create-product.mmd) | What happens during Create Product? |
 
 ## Open questions
 
-- Cache TTL for entitlements: long enough to protect the hot path, short
-  enough that revocation feels prompt. No answer yet — this is the main design
-  tension in `10-entitlement.mmd`.
-- Behaviour when the entitlement API is unavailable but a cached entitlement
-  exists. Fail-open and fail-closed are both defensible; the answer depends on
-  what the product does, which is not yet decided.
-- Whether usage records need to be reconciled against AWS Marketplace billing
-  reports, or whether Marketplace reconciliation is sufficient.
+Consolidated, in rough order of how much they block:
+
+1. **Remaining endpoints.** The spec was numbered "1. Create Product",
+   implying more exist. None have been provided, so the catalog cannot yet
+   be described end to end.
+2. **Product identifier** — generated or supplied? Becomes the partition key.
+3. **`price` representation** — minor units or decimal string? Currency?
+4. **Image storage** — S3 with keys, or signed URLs? Upload before or after?
+5. **Authentication** — who is permitted to create a product? A public
+   catalog endpoint with no auth is a write endpoint anyone can call.
+6. **Stock semantics** — can it be unlimited? How is that represented?
+7. **Idempotency** — can callers retry safely?
+8. **One-time vs recurring price** — determines whether `stock` even means
+   the same thing. A subscription is not stock-constrained the way a
+   physical good is.

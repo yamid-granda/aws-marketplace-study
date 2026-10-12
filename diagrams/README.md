@@ -7,9 +7,8 @@ a "and" in its title, it is two diagrams.
 
 | File | Level | Question |
 |---|---|---|
-| `00-context.mmd` | Context | Who talks to what, and what do we own? |
-| `10-entitlement.mmd` | Container | How does a request become an authorized request? |
-| `20-metering.mmd` | Container | How does usage become revenue? |
+| `00-context.mmd` | Context | What are the moving parts? |
+| `10-create-product.mmd` | Container | What happens during Create Product? |
 
 ## Rendering
 
@@ -24,6 +23,40 @@ It uses the locally pinned `mermaid-cli` from `package-lock.json`, so run
 but it warns — an unpinned renderer changes the SVG bytes and breaks the
 byte-exact staleness check.
 
+### Syntax gotcha
+
+A bare `%%` line with **no text after it** breaks the Mermaid parser with a
+misleading `Parse error on line 1` that points at the comment block rather
+than the empty comment. Use `%% ` (with a trailing space) or a genuinely
+blank line.
+
+## Provenance: specified vs inferred
+
+The most important rule in this file. An earlier revision of these diagrams
+described an AWS Marketplace *seller* integration — entitlements, metering,
+`CustomerIdentifier` — that the owner had never specified. It was invented,
+presented confidently, and sat in the repo long enough to look authoritative.
+
+So: **never let a guess look like a decision.**
+
+| Marker | Meaning |
+|---|---|
+| Solid node/edge | Specified by the owner. Authoritative. |
+| Amber dashed node/edge | Inferred or undecided. Not a decision — do not build on it. |
+| `%%` comment | Why the diagram looks like this |
+
+The styling is two lines:
+
+```
+classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
+class api,image_store notspecified
+```
+
+If a detail is not specified, **say it is not specified** — in the diagram, in
+[`../docs/system.md`](../docs/system.md), and in the commit message. An
+unresolved question written down is useful. An invented answer written down is
+a liability that outlives the conversation it came from.
+
 ## Authoring conventions
 
 The goal is that a diagram is legible to a human reading it *and* to an agent
@@ -33,7 +66,7 @@ grepping it. These rules are what make that true.
 
 ```mermaid
 flowchart LR
-  vendor_svc["Entitlement Service"]   %% ID = contract, label = prose
+  create_product["Create Product handler"]   %% ID = contract, label = prose
 ```
 
 The ID is referenced from docs, other diagrams, and eventually from code. The
@@ -43,7 +76,7 @@ reference in the same commit.
 ### 2. Label every edge
 
 ```mermaid
-a -- "SigV4 POST /ResolveEntitlements → Entitlements[]" --> b
+client -- "POST /products → 201 Created" --> api
 ```
 
 An unlabeled edge makes a reader guess the protocol, the direction, and the
@@ -53,23 +86,24 @@ it.
 ### 3. Put the rationale inline
 
 ```mermaid
-%% Why: ResolveEntitlements on every request would add a third-party round
-%% trip to the hot path. Cached instead, with an explicit staleness bound.
+%% The spec says 'images' without saying what an image is. DynamoDB caps an
+%% item at 400 KB, so bytes cannot live in products_table.
 ```
 
 Mermaid ignores `%%` comments when rendering; agents read them first. A comment
 sitting directly above the edge it explains survives refactoring in a way that
 a paragraph in `docs/system.md` does not.
 
-### 4. External systems are dashed
+### 4. Undecided things are amber dashed
 
-```mermaid
-classDef external stroke-dasharray: 4 3
-class marketplace external
+```
+classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
+class api,image_store notspecified
 ```
 
-Anything you do not control is external. This makes ownership legible at a
-glance, which is usually the actual question a reader has.
+Everything in this system is AWS-managed, so a "third party vs ours" marking
+buys nothing here. What a reader actually needs to know is *which parts are
+real yet*. See [Provenance](#provenance-specified-vs-inferred).
 
 ### 5. Style sheet
 

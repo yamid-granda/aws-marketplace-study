@@ -4,9 +4,30 @@ Working agreement for this repository. Read this before editing anything.
 
 ## What this repo is
 
-A study workspace for AWS Marketplace integration (entitlement + metering). Its
-purpose is to hold **written reasoning** about the system, with diagrams as
-derived views over that reasoning.
+Working notes and spec for a product-catalog service. Its purpose is to hold
+**written reasoning** about the system, with diagrams as derived views over
+that reasoning.
+
+## The rule that matters most
+
+**Never invent spec.** If something is not specified by the owner, write it down
+as an open question — do not fill it in with something plausible.
+
+An earlier revision of this repo documented an AWS Marketplace *seller*
+integration (entitlements, metering, `CustomerIdentifier`, SigV4) that the owner
+had never described. It was invented here, written confidently, and survived
+long enough to look authoritative. That is the failure mode this rule exists to
+prevent.
+
+Concretely:
+
+- In prose, separate **specified** from **inferred** from **open**. See the
+  provenance rule in [`docs/system.md`](docs/system.md).
+- In diagrams, mark inferred or undecided nodes with the `notspecified`
+  (amber dashed) class. See [`diagrams/README.md`](diagrams/README.md).
+- In commit messages, say what you assumed if you had to assume anything.
+
+Being wrong-but-flagged is fine. Being confident-but-invented is not.
 
 ## The one invariant
 
@@ -26,7 +47,7 @@ automatically. Do not "fix" CI by re-committing stale SVGs.
 
 | Path | Purpose |
 |---|---|
-| `docs/system.md` | Narrative: scope, constraints, glossary, terminology |
+| `docs/system.md` | The spec, data model, and open questions |
 | `diagrams/*.mmd` | **Editable** diagrams — one per concern |
 | `diagrams/README.md` | Diagram index and the conventions below |
 | `docs/img/*.svg` | **Generated** — do not edit |
@@ -95,13 +116,18 @@ fix `commitlint.config.mjs` and say so in the commit body.
 
 ## Accuracy rule
 
-This is a study repo, so wrong-but-confident is worse than incomplete.
+Wrong-but-flagged beats confident-but-invented.
 
-Before asserting anything about AWS Marketplace API behaviour — limits, field
-semantics, status codes, endpoints — verify it against the current AWS
-documentation and cite it. If you cannot verify it, write it down as an open
-question in `docs/system.md` rather than guessing. Mark unverified specifics
-with `TODO(verify):`.
+When asserting anything about AWS service behaviour — DynamoDB limits, Lambda
+retry semantics, S3 constraints, conditional-write guarantees — verify it
+against current AWS documentation and cite it. If you cannot verify it, write it
+as an open question in `docs/system.md` and mark it `TODO(verify):`.
+
+The same applies to the owner's own spec. The `Create Product` payload is the
+only specified contract in this repo. Everything downstream of it — the
+identifier, currency, image storage, auth — is currently undecided, and
+`docs/system.md` says so. Do not quietly promote one of those to a decision
+because the diagram looked incomplete without it.
 
 ## Commands
 
