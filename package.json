@@ -7,7 +7,7 @@
     "diagrams": "./scripts/render-diagrams.sh",
     "diagrams:check": "./scripts/render-diagrams.sh --check",
     "commitlint": "commitlint --edit",
-    "lint:commit": "commitlint --from origin/main --to HEAD",
+    "lint:commit": "./scripts/lint-commits.sh",
     "lint": "npm run lint:commit && npm run diagrams:check",
     "prepare": "husky"
   },

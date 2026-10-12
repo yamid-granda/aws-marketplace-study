@@ -119,5 +119,7 @@ unpinned renderer silently changes the SVGs and turns CI red for reasons that
 have nothing to do with the `.mmd`. Bumping it is a deliberate act — expect to
 re-render and commit all three SVGs in the same change.
 
-`npm run lint:commit` needs `origin/main` to be fetched. On a repo with no
-remote, lint an explicit range instead.
+`npm run lint:commit` picks a base ref automatically and refuses to report
+success on an empty range — a brand-new repo has no `origin/main` until its
+first push, and `commitlint --from origin/main` otherwise dies with a stack
+trace. Pass a base explicitly if you need one: `./scripts/lint-commits.sh <base> [<to>]`.
