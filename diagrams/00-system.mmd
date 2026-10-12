@@ -13,7 +13,7 @@
 
 flowchart TB
 
-  client["Client<br/>id: client"]
+  merchant["Merchant<br/>id: merchant"]
 
   api_gateway["API Gateway<br/>id: api_gateway"]
 
@@ -23,9 +23,9 @@ flowchart TB
 
   image_store["Amazon S3<br/>images<br/>id: image_store"]
 
-  client -- "POST /products" --> api_gateway
+  merchant -- "POST /products" --> api_gateway
   api_gateway -- "invoke" --> create_product
   create_product -- "PutItem" --> products_table
 
-  client -- "upload images" --> image_store
+  merchant -- "upload images" --> image_store
   create_product -- "image references" --> image_store

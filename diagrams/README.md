@@ -104,7 +104,7 @@ reference in the same commit.
 ### 2. Label every edge
 
 ```mermaid
-client -- "POST /products → 201 Created" --> api_gateway
+merchant -- "POST /products → 201 Created" --> api_gateway
 ```
 
 An unlabeled edge makes a reader guess the protocol, the direction, and the

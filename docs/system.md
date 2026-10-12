@@ -75,7 +75,7 @@ instead.
 
 > **Open:** what a reference is. An S3 key, or a pre-signed URL? And does
 > `images: 3` mean three uploaded objects or three references? Also undecided:
-> whether the client uploads before or after the product is created, and how
+> whether the merchant uploads before or after the product is created, and how
 > orphaned uploads are reclaimed if the create call then fails.
 
 ### `stock` constrains every later endpoint
@@ -107,10 +107,10 @@ ULID, or a caller-supplied SKU — and it becomes the DynamoDB partition key.
 ### Missing: idempotency
 
 Lambda retries on failure. A retried `Create Product` creates a second product
-unless the write is conditional or keyed on a client-supplied idempotency
+unless the write is conditional or keyed on a merchant-supplied idempotency
 token. This interacts directly with the identifier question above.
 
-> **Open:** whether callers may retry, and how duplicates are prevented.
+> **Open:** whether merchants may retry, and how duplicates are prevented.
 
 ## Diagrams
 
