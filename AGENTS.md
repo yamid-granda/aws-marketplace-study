@@ -83,10 +83,12 @@ both a human reading it and an agent grepping it.
    it explains is lost.
 
 5. **Undecided things get the `notspecified` class.**
-   `class api,image_store notspecified` renders amber and dashed. Everything
-   here is AWS-managed, so a "third party vs ours" marking carries no meaning —
-   what a reader needs to know is which parts are real yet. See the provenance
-   rule above; never let a guess render as solid.
+   `classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2`
+   renders amber and dashed. Everything currently in `00-system.mmd` is
+   specified, so no node is marked today — but a new feature must mark anything
+   undecided. Everything here is AWS-managed, so a "third party vs ours" marking
+   carries no meaning; what a reader needs to know is which parts are real yet.
+   See the provenance rule above; never let a guess render as solid.
 
 6. **Cross-reference by path.** Link diagrams to the code or doc that
    implements them so an agent can jump from diagram to implementation.

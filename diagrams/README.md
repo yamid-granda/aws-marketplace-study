@@ -51,11 +51,13 @@ So: **never let a guess look like a decision.**
 | Amber dashed node/edge | Inferred or undecided. Not a decision — do not build on it. |
 | `%%` comment | Why the diagram looks like this |
 
-The styling is two lines:
+The styling is two lines. No node currently needs it — every part of
+`00-system.mmd` is specified. It is documented here so the first feature added
+with an undecided part gets marked rather than guessed:
 
 ```
 classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
-class api,image_store,resolve_images,assign_id,is_duplicate notspecified
+class that_node notspecified
 ```
 
 If a detail is not specified, **say it is not specified** — in the diagram, in
@@ -102,7 +104,7 @@ reference in the same commit.
 ### 2. Label every edge
 
 ```mermaid
-client -- "POST /products → 201 Created" --> api
+client -- "POST /products → 201 Created" --> api_gateway
 ```
 
 An unlabeled edge makes a reader guess the protocol, the direction, and the
@@ -124,7 +126,7 @@ a paragraph in `docs/system.md` does not.
 
 ```
 classDef notspecified stroke-width:2px,stroke:#b45309,stroke-dasharray: 2 2
-class api,image_store notspecified
+class that_node notspecified
 ```
 
 Everything in this system is AWS-managed, so a "third party vs ours" marking

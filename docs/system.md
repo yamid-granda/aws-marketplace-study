@@ -43,12 +43,10 @@ not filled in here.
 
 | Concern | Specified |
 |---|---|
+| Front door | API Gateway |
 | Compute | AWS Lambda |
-| Storage | DynamoDB |
-
-**Inferred:** something terminates HTTP in front of the Lambda — API Gateway,
-a Lambda Function URL, or an ALB. The spec says "endpoints" but names no
-front door. Diagrams show API Gateway; this is a guess, not a decision.
+| Product storage | DynamoDB |
+| Image storage | S3 |
 
 ## Data model
 
@@ -69,17 +67,16 @@ a float.
 > across currencies, and the choice of representation constrains every later
 > endpoint that touches price.
 
-### `images` should not be image data
+### `images` live in S3, not in the item
 
-**Open:** the payload says `images` without saying what an image *is*.
+**Specified:** images are stored in S3. DynamoDB caps an item at 400 KB, so
+image bytes cannot live in the product item — the item holds references
+instead.
 
-DynamoDB caps an item at 400 KB, so image bytes in the item are not viable.
-The likely design is S3 for the binary, with the product item holding keys or
-signed URLs. That also affects the count constraint: is `images: 3` three
-uploaded objects, or three references?
-
-> **Open:** image storage, and whether images are uploaded before the product
-> is created or attached afterward.
+> **Open:** what a reference is. An S3 key, or a pre-signed URL? And does
+> `images: 3` mean three uploaded objects or three references? Also undecided:
+> whether the client uploads before or after the product is created, and how
+> orphaned uploads are reclaimed if the create call then fails.
 
 ### `stock` constrains every later endpoint
 
@@ -135,7 +132,8 @@ Consolidated, in rough order of how much they block:
    be described end to end.
 2. **Product identifier** — generated or supplied? Becomes the partition key.
 3. **`price` representation** — minor units or decimal string? Currency?
-4. **Image storage** — S3 with keys, or signed URLs? Upload before or after?
+4. **Image reference shape** — S3 key or pre-signed URL? Upload before or after
+   product creation, and how are orphaned uploads reclaimed?
 5. **Authentication** — who is permitted to create a product? A public
    catalog endpoint with no auth is a write endpoint anyone can call.
 6. **Stock semantics** — can it be unlimited? How is that represented?
